@@ -1,0 +1,39 @@
+services:
+  app:
+    build: ./app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://admin:secret@db:5432/tasktracker
+      - SECRET_KEY=your_secret_key_here
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - task-net
+
+  db:
+    image: postgres:13
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: tasktracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - task-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d tasktracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  task-net:
