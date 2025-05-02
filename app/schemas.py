@@ -1,9 +1,10 @@
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
+from typing import List, Optional
 
+from pydantic import BaseModel, EmailStr, Field
 
 # --- Пользователь ---
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -23,6 +24,7 @@ class UserOut(UserBase):
 
 # --- Токены ---
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -33,6 +35,7 @@ class TokenData(BaseModel):
 
 
 # --- Задачи ---
+
 
 class TaskBase(BaseModel):
     title: str = Field(..., max_length=100)
@@ -58,13 +61,16 @@ class TaskOut(TaskBase):
 
     class Config:
         orm_mode = True
-        
+
+
 class ProjectBase(BaseModel):
     name: str
 
+
 class ProjectCreate(ProjectBase):
     task_ids: List[int] = []
-    
+
+
 class ProjectOut(BaseModel):
     id: int
     name: str
@@ -72,7 +78,8 @@ class ProjectOut(BaseModel):
 
     class Config:
         orm_mode = True
-        
+
+
 class ProjectAlgOut(BaseModel):
     id: int
     title: str
