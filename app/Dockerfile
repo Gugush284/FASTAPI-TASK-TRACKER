@@ -6,4 +6,5 @@ RUN pip install --no-cache-dir fastapi uvicorn[standard] sqlalchemy psycopg2-bin
 
 COPY . .
 
-CMD ["pytest", "./test.py"]
+RUN pytest ./test.py
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
