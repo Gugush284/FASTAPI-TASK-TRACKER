@@ -8,8 +8,6 @@ from database import Base
 
 
 class RoleEnum(str, PyEnum):
-    # Define user roles that control authorization.
-    # Определяем роли пользователей для контроля доступа.
     admin = "admin"
     moderator = "moderator"
     viewer = "viewer"
@@ -17,9 +15,6 @@ class RoleEnum(str, PyEnum):
 
 class User(Base):
     __tablename__ = "users"
-
-    # User entity fields and relationships.
-    # Поля и связи сущности пользователя.
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -34,9 +29,7 @@ class User(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
-
-    # Task entity fields including ownership and project link.
-    # Поля задачи, включая связь с владельцем и проектом.
+    
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True, nullable=False)
     description = Column(String, nullable=True)
@@ -54,8 +47,6 @@ class Task(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    # Project entity with owner and task list.
-    # Сущность проекта с владельцем и списком задач.
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
 

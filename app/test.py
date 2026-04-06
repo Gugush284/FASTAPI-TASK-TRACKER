@@ -16,6 +16,7 @@ from main import app
 import auth
 import crud
 
+
 TEST_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(
     TEST_DATABASE_URL,
@@ -34,6 +35,7 @@ def reset_db():
 
 def override_get_db():
     db = TestingSessionLocal()
+    
     try:
         yield db
     finally:
