@@ -2,9 +2,9 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir fastapi uvicorn[standard] sqlalchemy psycopg2-binary alembic python-jose[cryptography] passlib bcrypt==4.0.1 pydantic[email] python-multipart httpx pytest
-
 COPY . .
+
+RUN pip install -r ./requirements.txt
 
 RUN pytest ./test.py
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
