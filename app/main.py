@@ -93,6 +93,11 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         status.HTTP_403_FORBIDDEN: {"description": "Role does not match. Please log in again."},
     },
 )
+@app.delete(
+    "/delete/me",
+    status_code=status.HTTP_200_OK,
+    include_in_schema=False,
+)
 def delete_current_user(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
     db.delete(current_user)
     db.commit()
@@ -280,6 +285,23 @@ def create_project(project_in: schemas.ProjectCreate, db: Session = Depends(data
 )
 def read_projects(db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.get_current_user)):
     return crud.get_projects(db, current_user)
+
+
+@app.patch(
+    "/projects/{project_id}",
+    response_model=schemas.ProjectOut,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required"},
+        status.HTTP_403_FORBIDDEN: {"description": "Moderator or admin role required"},
+        status.HTTP_404_NOT_FOUND: {"description": "Project not found"},
+    },
+)
+def update_project(project_id: int, project_in: schemas.ProjectUpdate, db: Session = Depends(database.get_db), current_user: models.User = Depends(auth.require_moderator)):
+    project = crud.get_project(db, project_id, current_user)
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    
+    return crud.update_project(db, project, project_in)
 
 
 @app.delete(

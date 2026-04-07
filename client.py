@@ -17,14 +17,41 @@ class TaskTrackerClient:
 
     def _get_headers(self):
         headers = {"Content-Type": "application/json"}
+        
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
+            
         return headers
+    
+    def _delete_data(self):
+        print("\nDeleting all projects...")
+        projects = self.get_projects()
+        if projects:
+            for project in projects:
+                if self.delete_project(project['id']):
+                    print(f"   ✓ Deleted project: {project['name']} (ID: {project['id']})")
+                else:
+                    print(f"   ✗ Failed to delete project: {project['name']} (ID: {project['id']})")
+        else:
+            print("   No projects found")
+        
+        tasks = self.get_tasks()
+        if tasks:
+            for task in tasks:
+                if self.delete_task(task['id']):
+                    print(f"   ✓ Deleted task: {task['title']} (ID: {task['id']})")
+                else:
+                    print(f"   ✗ Failed to delete task: {task['title']} (ID: {task['id']})")
+        else:
+            print("   No tasks found")
+        
+        print("\n=== Cleanup completed ===")
 
     def register(self, email: str, password: str):
-        """Register a new user"""
         data = {"email": email, "password": password}
+        
         response = self.session.post(f"{self.base_url}/register", json=data)
+        
         if response.status_code == 201:
             print("User registered successfully")
             return response.json()
@@ -33,16 +60,19 @@ class TaskTrackerClient:
             return None
 
     def login(self, email: str, password: str):
-        """Login and get access token"""
         data = {"username": email, "password": password}
+        
         response = self.session.post(
             f"{self.base_url}/token",
             data=data,
             headers={"Content-Type": "application/x-www-form-urlencoded"}
         )
+        
         if response.status_code == 201:
             token_data = response.json()
+            
             self.token = token_data["access_token"]
+            
             print("Login successful")
             return token_data
         else:
@@ -50,10 +80,11 @@ class TaskTrackerClient:
             return None
 
     def get_current_user(self):
-        """Get current user info"""
         response = self.session.get(f"{self.base_url}/users/me", headers=self._get_headers())
+        
         if response.status_code == 200:
             user = response.json()
+            
             print(f"Current user: {user['email']} (ID: {user['id']})")
             return user
         else:
@@ -61,60 +92,71 @@ class TaskTrackerClient:
             return None
 
     def delete_user(self, email: str, password: str):
-        """Delete current user"""
         data = {"username": email, "password": password}
+        
         headers = self._get_headers()
+        
         headers["Content-Type"] = "application/x-www-form-urlencoded"
+        
         response = self.session.request(
             "DELETE",
             f"{self.base_url}/delete/me",
             data=data,
             headers=headers
         )
+        
         if response.status_code == 200:
             print("User deleted successfully")
+            
             self.token = None
+            
             return True
         else:
             print(f"Failed to delete user: {response.status_code} - {response.text}")
             return False
 
     def create_task(self, title: str, description: str = "", time_spent: int = 0):
-        """Create a new task"""
         data = {
             "title": title,
             "description": description,
             "time_spent": time_spent
         }
+        
         response = self.session.post(
             f"{self.base_url}/task/create",
             json=data,
             headers=self._get_headers()
         )
+        
         if response.status_code == 201:
             task = response.json()
+            
             print(f"Task created: {task['title']} (ID: {task['id']})")
+            
             return task
         else:
             print(f"Failed to create task: {response.status_code} - {response.text}")
             return None
 
     def get_tasks(self):
-        """Get all tasks for current user"""
         response = self.session.get(f"{self.base_url}/tasks/", headers=self._get_headers())
+        
         if response.status_code == 200:
             tasks = response.json()
+            
             print(f"Found {len(tasks)} tasks:")
+            
             for task in tasks:
                 print(f"  - ID: {task['id']}, Title: {task['title']}, Status: {task['status']}, Time: {task['time_spent']}min")
+                
             return tasks
         else:
             print(f"Failed to get tasks: {response.status_code} - {response.text}")
             return None
 
     def delete_task(self, task_id: int):
-        """Delete a task"""
         response = self.session.delete(f"{self.base_url}/tasks/{task_id}", headers=self._get_headers())
+        
         if response.status_code == 200:
             print(f"Task {task_id} deleted successfully")
             return True
@@ -123,15 +165,17 @@ class TaskTrackerClient:
             return False
 
     def create_project(self, name: str, task_ids: list):
-        """Create a new project with tasks"""
         data = {"name": name, "task_ids": task_ids}
+        
         response = self.session.post(
             f"{self.base_url}/projects/",
             json=data,
             headers=self._get_headers()
         )
+        
         if response.status_code == 201:
             project = response.json()
+            
             print(f"Project created: {project['name']} (ID: {project['id']})")
             return project
         else:
@@ -139,21 +183,39 @@ class TaskTrackerClient:
             return None
 
     def get_projects(self):
-        """Get all projects for current user"""
         response = self.session.get(f"{self.base_url}/projects/", headers=self._get_headers())
+        
         if response.status_code == 200:
             projects = response.json()
+            
             print(f"Found {len(projects)} projects:")
+            
             for project in projects:
                 print(f"  - ID: {project['id']}, Name: {project['name']}")
+                
             return projects
         else:
             print(f"Failed to get projects: {response.status_code} - {response.text}")
             return None
 
+    def update_project(self, project_id: int, name: str = None, task_ids: list = None):
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if task_ids is not None:
+            data["task_ids"] = task_ids
+        response = self.session.patch(f"{self.base_url}/projects/{project_id}", json=data, headers=self._get_headers())
+        if response.status_code == 200:
+            project = response.json()
+            print(f"Project updated: {project['name']} (ID: {project['id']}, Tasks: {len(project['tasks'])})")
+            return project
+        else:
+            print(f"Failed to update project: {response.status_code} - {response.text}")
+            return None
+
     def delete_project(self, project_id: int):
-        """Delete a project"""
         response = self.session.delete(f"{self.base_url}/projects/{project_id}", headers=self._get_headers())
+        
         if response.status_code == 204:
             print(f"Project {project_id} deleted successfully")
             return True
@@ -162,40 +224,46 @@ class TaskTrackerClient:
             return False
 
     def select_tasks(self, project_id: int, time_limit: int):
-        """Select tasks for execution within time limit"""
         response = self.session.get(
             f"{self.base_url}/projects/{project_id}/select_tasks?time_limit={time_limit}",
             headers=self._get_headers()
         )
+        
+        
         if response.status_code == 200:
             tasks = response.json()
+            
             print(f"Selected {len(tasks)} tasks within {time_limit} minutes:")
             for task in tasks:
                 print(f"  - ID: {task['id']}, Title: {task['title']}, Time: {task['time_spent']}min")
+                
             return tasks
         else:
             print(f"Failed to select tasks: {response.status_code} - {response.text}")
             return None
 
     def get_all_users(self):
-        """Get all users (admin only)"""
         response = self.session.get(f"{self.base_url}/users/", headers=self._get_headers())
+        
         if response.status_code == 200:
             users = response.json()
+            
             print(f"Found {len(users)} users:")
             for user in users:
                 print(f"  - ID: {user['id']}, Email: {user['email']}, Role: {user['role']}")
+                
             return users
         else:
             print(f"Failed to get users: {response.status_code} - {response.text}")
             return None
 
     def create_user(self, email: str, password: str, role: str = "viewer"):
-        """Create a new user (admin only)"""
         data = {"email": email, "password": password, "role": role}
         response = self.session.post(f"{self.base_url}/users/", json=data, headers=self._get_headers())
+        
         if response.status_code == 201:
             user = response.json()
+            
             print(f"User created: {user['email']} (Role: {user['role']})")
             return user
         else:
@@ -203,11 +271,12 @@ class TaskTrackerClient:
             return None
 
     def update_user_role(self, user_id: int, role: str):
-        """Update user role (admin only)"""
         data = {"role": role}
         response = self.session.patch(f"{self.base_url}/users/{user_id}", json=data, headers=self._get_headers())
+        
         if response.status_code == 200:
             user = response.json()
+            
             print(f"User {user['email']} role updated to {user['role']}")
             return user
         else:
@@ -215,8 +284,8 @@ class TaskTrackerClient:
             return None
 
     def delete_user_by_id(self, user_id: int):
-        """Delete user by ID (admin only)"""
         response = self.session.delete(f"{self.base_url}/users/{user_id}", headers=self._get_headers())
+        
         if response.status_code == 204:
             print(f"User {user_id} deleted successfully")
             return True
@@ -225,75 +294,100 @@ class TaskTrackerClient:
             return False
 
     def logout(self):
-        """Logout by clearing token"""
         self.token = None
         print("Logged out")
 
     def demo(self):
-        """Run a complete demo of all API operations including role testing"""
         print("=== Task Tracker API Demo with Role Testing ===\n")
+        
+        admin_login = "admin@example.com"
+        password = "password123"
 
-        # Step 1: Register first user (becomes admin)
         print("1. Registering admin user...")
-        admin = self.register("admin@example.com", "password123")
+        admin = self.register(admin_login, password)
         if not admin:
             print("Demo failed at admin registration")
             return
 
-        # Step 2: Login as admin
         print("\n2. Logging in as admin...")
-        token_data = self.login("admin@example.com", "password123")
+        token_data = self.login(admin_login, password)
         if not token_data:
             print("Demo failed at admin login")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+                
             return
 
-        # Step 3: Get admin info
         print("\n3. Getting admin user info...")
         admin_info = self.get_current_user()
         if not admin_info or admin_info['role'] != 'admin':
             print("Demo failed: user is not admin")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
             return
+        
+        viewer_login = "viewer@example.com"
 
-        # Step 4: Create viewer user
         print("\n4. Creating viewer user...")
-        viewer = self.create_user("viewer@example.com", "password123", "viewer")
+        viewer = self.create_user(viewer_login, password, "viewer")
         if not viewer:
             print("Demo failed at creating viewer")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
             return
 
-        # Step 5: Create moderator user
+        moderator_login = "moderator@example.com"
+       
         print("\n5. Creating moderator user...")
-        moderator = self.create_user("moderator@example.com", "password123", "moderator")
+        moderator = self.create_user(moderator_login, password, "moderator")
         if not moderator:
             print("Demo failed at creating moderator")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data")    
             return
 
-        # Step 6: Get all users (admin only)
         print("\n6. Getting all users (admin only)...")
         users = self.get_all_users()
         if not users or len(users) < 3:
             print("Demo failed at getting all users")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")    
             return
 
-        # Step 7: Test admin permissions
         print("\n7. Testing admin permissions...")
 
-        # Admin creates task
         admin_task = self.create_task("Admin Task", "Created by admin", 60)
         if not admin_task:
             print("Admin failed to create task")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
             return
 
-        # Verify task creation by getting tasks
         print("   - Verifying task creation...")
         tasks = self.get_tasks()
         if tasks and len(tasks) == 1 and tasks[0]['title'] == "Admin Task":
             print("   ✓ Task creation verified")
         else:
             print("   ✗ Task creation verification failed")
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            print("Warning: Failed to clean up demo tasks data")
             return
 
-        # Admin updates task (should succeed)
         print("   - Updating task as admin...")
         update_data = {"title": "Updated by admin"}
         response = self.session.patch(f"{self.base_url}/tasks/{admin_task['id']}", json=update_data, headers=self._get_headers())
@@ -302,41 +396,118 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Admin failed to update: {response.status_code}")
 
-        # Admin deletes task (should succeed)
         print("   - Deleting task as admin...")
         response = self.session.delete(f"{self.base_url}/tasks/{admin_task['id']}", headers=self._get_headers())
         if response.status_code == 200:
             print("   ✓ Admin can delete task")
         else:
             print(f"   ✗ Admin failed to delete: {response.status_code}")
+            print("Warning: Failed to clean up demo tasks data")
 
-        # Admin can manage users (already tested by creating users above)
-        print("   ✓ Admin can manage users (verified by user creation)")
+        print("   - Creating project as admin...")
+        admin_project = self.create_project("Admin Project", [])
+        if admin_project:
+            print("   ✓ Admin can create project")
+            
+            response = self.session.patch(f"{self.base_url}/projects/{admin_project['id']}", json={"name": "Admin Project Updated"}, headers=self._get_headers())
+            
+            if response.status_code == 200:
+                print("   ✓ Admin can update project")
+            else:
+                print(f"   ✗ Admin failed to update project: {response.status_code}")
+            
+            response = self.session.delete(f"{self.base_url}/projects/{admin_project['id']}", headers=self._get_headers())
+            if response.status_code == 204:
+                print("   ✓ Admin can delete project")
+            else:
+                print(f"   ✗ Admin failed to delete project: {response.status_code}")
+        else:
+            print("   ✗ Admin failed to create project")
 
-        # Step 8: Test viewer permissions
+        print("   - Creating temp user as admin...")
+        temp = self.create_user("temp@example.com", password, "viewer")
+        if not temp:
+            print("   ✗ Admin failed to create user")
+        else:
+            print("   - Promoting temp user to moderator...")
+            
+            updated = self.update_user_role(temp['id'], "moderator")
+            if not updated or updated['role'] != 'moderator':
+                print("   ✗ Admin failed to update user role")
+                
+                if not self.delete_user_by_id(temp['id']):
+                    print("Warning: Failed to clean up demo data")
+                    
+                return False
+            
+            print("   ✓ Role updated to moderator")
+
+            print("   - Verifying role change...")
+            users = self.get_all_users()
+            temp_user = next((u for u in users if u['id'] == temp['id']), None)
+            if not temp_user or temp_user['role'] != 'moderator':
+                print("   ✗ Role verification failed")
+                
+                if not self.delete_user_by_id(temp['id']):
+                    print("Warning: Failed to clean up demo data")
+                    
+                return False
+            
+            print("   ✓ Role verified as moderator")
+
+            print("   - Deleting temp user...")
+            if not self.delete_user_by_id(temp['id']):
+                print("   ✗ Admin failed to delete user")
+                print("Warning: Failed to clean up demo data")
+                
+            print("   ✓ Admin can manage users")
+
         print("\n7. Testing viewer permissions...")
         self.logout()
         viewer_login = self.login("viewer@example.com", "password123")
         if not viewer_login:
             print("Failed to login as viewer")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
-
-        # Viewer creates task
+        
         task = self.create_task("Viewer Task", "Created by viewer", 30)
         if not task:
             print("Viewer failed to create task")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
 
-        # Verify task creation by getting tasks
         print("   - Verifying task creation...")
         tasks = self.get_tasks()
         if tasks and len(tasks) == 1 and tasks[0]['title'] == "Viewer Task":
             print("   ✓ Task creation verified")
         else:
             print("   ✗ Task creation verification failed")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
+            print("Warning: Failed to clean up demo data")
+            
             return
 
-        # Viewer tries to update task (should fail)
         print("   - Trying to update task (should fail)...")
         update_data = {"title": "Updated by viewer"}
         response = self.session.patch(f"{self.base_url}/tasks/{task['id']}", json=update_data, headers=self._get_headers())
@@ -345,7 +516,6 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Viewer should not be able to update: {response.status_code}")
 
-        # Viewer tries to delete task (should fail)
         print("   - Trying to delete task (should fail)...")
         response = self.session.delete(f"{self.base_url}/tasks/{task['id']}", headers=self._get_headers())
         if response.status_code == 403:
@@ -353,7 +523,6 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Viewer should not be able to delete: {response.status_code}")
 
-        # Viewer tries to get all users (should fail)
         print("   - Trying to get all users (should fail)...")
         response = self.session.get(f"{self.base_url}/users/", headers=self._get_headers())
         if response.status_code == 403:
@@ -361,7 +530,6 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Viewer should not be able to get all users: {response.status_code}")
 
-        # Viewer tries to create a user (should fail)
         print("   - Trying to create a user (should fail)...")
         user_data = {"email": "newuser@example.com", "password": "password123", "role": "viewer"}
         response = self.session.post(f"{self.base_url}/users/", json=user_data, headers=self._get_headers())
@@ -370,53 +538,123 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Viewer should not be able to create users: {response.status_code}")
 
-        # Step 8: Test moderator permissions
+        print("   - Creating project as viewer...")
+        viewer_project = self.create_project("Viewer Project", [])
+        
+        if viewer_project:
+            print("   ✓ Viewer can create project")
+            
+            response = self.session.patch(f"{self.base_url}/projects/{viewer_project['id']}", json={"name": "Updated"}, headers=self._get_headers())
+            if response.status_code == 403:
+                print("   ✓ Viewer correctly denied project update")
+            else:
+                print(f"   ✗ Viewer should not be able to update project: {response.status_code}")
+            
+            response = self.session.delete(f"{self.base_url}/projects/{viewer_project['id']}", headers=self._get_headers())
+            if response.status_code == 403:
+                print("   ✓ Viewer correctly denied project deletion")
+            else:
+                print(f"   ✗ Viewer should not be able to delete project: {response.status_code}")
+        else:
+            print("   ✗ Viewer failed to create project")
+            
+
         print("\n8. Testing moderator permissions...")
         self.logout()
-        moderator_login = self.login("moderator@example.com", "password123")
+        moderator_login = self.login(moderator_login, password)
         if not moderator_login:
             print("Failed to login as moderator")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
 
-        # Moderator creates own task
         mod_task = self.create_task("Moderator Task", "Created by moderator", 45)
         if not mod_task:
             print("Moderator failed to create task")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
 
-        # Verify task creation by getting tasks
         print("   - Verifying task creation...")
         tasks = self.get_tasks()
-        if tasks and len(tasks) >= 1:  # Since moderator can see all tasks, but at least own
+        if tasks and len(tasks) >= 1:
             print("   ✓ Task creation verified")
         else:
             print("   ✗ Task creation verification failed")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
 
-        # Moderator updates task (should succeed)
         print("   - Updating task as moderator...")
-        response = self.session.patch(f"{self.base_url}/tasks/{task['id']}", json=update_data, headers=self._get_headers())
+        response = self.session.patch(f"{self.base_url}/tasks/{task['id']}", json={"title": "Updated by moderator"}, headers=self._get_headers())
         if response.status_code == 200:
             print("   ✓ Moderator can update task")
         else:
             print(f"   ✗ Moderator failed to update: {response.status_code}")
 
-        # Moderator deletes task (should succeed)
         print("   - Deleting task as moderator...")
         response = self.session.delete(f"{self.base_url}/tasks/{task['id']}", headers=self._get_headers())
         if response.status_code == 200:
             print("   ✓ Moderator can delete task")
         else:
             print(f"   ✗ Moderator failed to delete: {response.status_code}")
-
-        # Moderator deletes own task
+            
         response = self.session.delete(f"{self.base_url}/tasks/{mod_task['id']}", headers=self._get_headers())
         if response.status_code == 200:
             print("   ✓ Moderator deleted own task")
         else:
             print(f"   ✗ Moderator failed to delete own task: {response.status_code}")
 
-        # Moderator tries to get all users (should fail)
+        print("   - Creating project as moderator...")
+        mod_project_task = self.create_task("Moderator Project Task", "Task for project", 20)
+        if not mod_project_task:
+            print("   ✗ Moderator failed to create task for project")
+        else:
+            print("   - Updating task status to in_progress...")
+            response = self.session.patch(f"{self.base_url}/tasks/{mod_project_task['id']}", json={"status": "in_progress"}, headers=self._get_headers())
+            if response.status_code == 200 and response.json()['status'] == 'in_progress':
+                print("   ✓ Moderator can update task status")
+            else:
+                print(f"   ✗ Moderator failed to update task status: {response.status_code}")
+        mod_project = self.create_project("Moderator Project", [mod_project_task['id']] if mod_project_task else [])
+        
+        if mod_project:
+            print("   ✓ Moderator can create project")
+            
+            updated = self.update_project(mod_project['id'], name="Moderator Project Updated", task_ids=[mod_project_task['id']] if mod_project_task else [])
+            if updated:
+                task_ids_in_project = [t['id'] for t in updated['tasks']]
+                if mod_project_task and mod_project_task['id'] in task_ids_in_project:
+                    print("   ✓ Moderator added mod_project_task to project")
+                else:
+                    print("   ✗ mod_project_task not found in updated project")
+            
+            response = self.session.delete(f"{self.base_url}/projects/{mod_project['id']}", headers=self._get_headers())
+            if response.status_code == 204:
+                print("   ✓ Moderator can delete project")
+            else:
+                print(f"   ✗ Moderator failed to delete project: {response.status_code}")
+        else:
+            print("   ✗ Moderator failed to create project")
+
         print("   - Trying to get all users (should fail)...")
         response = self.session.get(f"{self.base_url}/users/", headers=self._get_headers())
         if response.status_code == 403:
@@ -424,7 +662,6 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Moderator should not be able to get all users: {response.status_code}")
 
-        # Moderator tries to create a user (should fail)
         print("   - Trying to create a user (should fail)...")
         response = self.session.post(f"{self.base_url}/users/", json=user_data, headers=self._get_headers())
         if response.status_code == 403:
@@ -432,7 +669,6 @@ class TaskTrackerClient:
         else:
             print(f"   ✗ Moderator should not be able to create users: {response.status_code}")
 
-        # Moderator tries to update user role (should fail)
         print("   - Trying to update user role (should fail)...")
         role_data = {"role": "moderator"}
         response = self.session.patch(f"{self.base_url}/users/{viewer['id']}", json=role_data, headers=self._get_headers())
@@ -444,30 +680,49 @@ class TaskTrackerClient:
         # Step 10: Back to admin for cleanup
         print("\n9. Logging back as admin for cleanup...")
         self.logout()
-        admin_login = self.login("admin@example.com", "password123")
+        admin_login = self.login(admin_login, "password123")
         if not admin_login:
             print("Failed to login back as admin")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            if not self.delete_user(viewer_login, password):
+                print("Warning: Failed to clean up demo data") 
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
+            
+        self._delete_data()
 
         # Admin deletes viewer and moderator
         print("   - Deleting viewer user...")
         if not self.delete_user_by_id(viewer['id']):
             print("Failed to delete viewer")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+                
+            if not self.delete_user(moderator_login, password):
+                print("Warning: Failed to clean up demo data")
+            
+            print("Warning: Failed to clean up demo data")
+            
             return
 
         print("   - Deleting moderator user...")
         if not self.delete_user_by_id(moderator['id']):
             print("Failed to delete moderator")
+            
+            if not self.delete_user(admin_login, password):
+                print("Warning: Failed to clean up demo data")
+            
             return
 
         print("\n=== Role testing completed successfully! ===")
-        print("✓ Admin can manage users and all operations")
-        print("✓ Viewer can create but not modify/delete")
-        print("✓ Moderator can modify/delete but not manage users")
 
-        # Step 11: Cleanup admin
         print("\n10. Cleaning up admin data...")
-        if self.delete_user("admin@example.com", "password123"):
+        if self.delete_user(admin_login, password):
             print("Demo data cleaned up successfully")
         else:
             print("Warning: Failed to clean up demo data")

@@ -255,7 +255,6 @@ def test_create_project_with_invalid_task_id():
 def test_select_tasks_greedy():
     headers = get_auth_headers()
 
-    # Создаем задачи с разным временем
     task1_data = {"title": "Task 1", "description": "Desc 1", "time_spent": 10}
     task2_data = {"title": "Task 2", "description": "Desc 2", "time_spent": 20}
     task3_data = {"title": "Task 3", "description": "Desc 3", "time_spent": 30}
@@ -286,7 +285,6 @@ def test_select_tasks_greedy():
     selected_tasks = response.json()
     assert len(selected_tasks) == 2
 
-    # Проверяем порядок задач (должны быть отсортированы по времени)
     assert selected_tasks[0]["time_spent"] == 10
     assert selected_tasks[1]["time_spent"] == 20
 

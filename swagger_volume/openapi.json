@@ -94,6 +94,9 @@
           },
           "401": {
             "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role does not match. Please log in again."
           }
         },
         "security": [
@@ -116,30 +119,9 @@
           },
           "401": {
             "description": "Authentication required"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/delete/me": {
-      "delete": {
-        "summary": "Delete Current User",
-        "operationId": "delete_current_user_delete_me_delete",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
           },
-          "401": {
-            "description": "Authentication required"
+          "403": {
+            "description": "Role does not match. Please log in again."
           }
         },
         "security": [
@@ -325,24 +307,19 @@
         }
       }
     },
-    "/tasks/": {
+    "/task/create": {
       "post": {
         "summary": "Create Task",
-        "operationId": "create_task_tasks__post",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
+        "operationId": "create_task_task_create_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TaskCreate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
@@ -358,11 +335,21 @@
           "401": {
             "description": "Authentication required"
           },
+          "403": {
+            "description": "Role does not match. Please log in again."
+          },
           "422": {
             "description": "Validation Error"
           }
-        }
-      },
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/tasks/": {
       "get": {
         "summary": "Read Tasks",
         "operationId": "read_tasks_tasks__get",
@@ -413,49 +400,13 @@
           "401": {
             "description": "Authentication required"
           },
+          "403": {
+            "description": "Role does not match. Please log in again."
+          },
           "422": {
             "description": "Validation Error"
           }
         }
-      }
-    },
-    "/task/create": {
-      "post": {
-        "summary": "Create Task",
-        "operationId": "create_task_task_create_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TaskCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskOut"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required"
-          },
-          "422": {
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
       }
     },
     "/tasks/{task_id}": {
@@ -584,6 +535,9 @@
           },
           "401": {
             "description": "Authentication required"
+          },
+          "403": {
+            "description": "Role does not match. Please log in again."
           }
         },
         "security": [
@@ -622,6 +576,9 @@
           "401": {
             "description": "Authentication required"
           },
+          "403": {
+            "description": "Role does not match. Please log in again."
+          },
           "404": {
             "description": "Task not found"
           },
@@ -637,6 +594,67 @@
       }
     },
     "/projects/{project_id}": {
+      "patch": {
+        "summary": "Update Project",
+        "operationId": "update_project_projects__project_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Moderator or admin role required"
+          },
+          "404": {
+            "description": "Project not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "summary": "Delete Project",
         "operationId": "delete_project_projects__project_id__delete",
@@ -895,6 +913,37 @@
           "name"
         ],
         "title": "ProjectOut"
+      },
+      "ProjectUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "task_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Ids"
+          }
+        },
+        "type": "object",
+        "title": "ProjectUpdate"
       },
       "TaskCreate": {
         "properties": {

@@ -150,3 +150,17 @@ def create_project(db: Session, project_in: schemas.ProjectCreate, owner_id: int
 def delete_project(db: Session, project: models.Project) -> None:
     db.delete(project)
     db.commit()
+    
+
+def update_project(db: Session, project: models.Project, project_in: schemas.ProjectUpdate) -> models.Project:
+    if project_in.name is not None:
+        project.name = project_in.name
+    if project_in.task_ids is not None:
+        db.query(models.Task).filter(models.Task.project_id == project.id).update({"project_id": None})
+        for task_id in project_in.task_ids:
+            task = db.query(models.Task).filter(models.Task.id == task_id).first()
+            if task:
+                task.project_id = project.id
+    db.commit()
+    db.refresh(project)
+    return project

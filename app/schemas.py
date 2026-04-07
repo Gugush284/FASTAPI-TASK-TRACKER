@@ -72,6 +72,11 @@ class ProjectCreate(ProjectBase):
     task_ids: List[int] = Field(default_factory=list)
 
 
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    task_ids: Optional[List[int]] = None
+
+
 class ProjectOut(BaseModel):
     id: int
     name: str
